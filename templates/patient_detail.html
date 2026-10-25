@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Profile — {{ patient.patient_id }} — Diavision{% endblock %}
+{% block page_title %}Patient Profile & Health Progress Tracker{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Header Card -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="avatar" style="width: 52px; height: 52px; font-size: 1.25rem;">
+          {{ patient.patient_id[:3] }}
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-main);">
+              {{ patient.name or 'Anonymized Patient' }}
+            </h3>
+            <span class="patient-id-badge">{{ patient.patient_id }}</span>
+          </div>
+          <span style="font-size: 0.82rem; color: var(--text-muted);">
+            Registered: {{ patient.created_at }} • Source: {{ patient.source }}
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{{ url_for('doctor_summary_page', patient_id=patient.patient_id) }}" target="_blank" class="btn btn-secondary">
+          <i data-lucide="printer"></i>
+          <span>Doctor Visit Summary</span>
+        </a>
+        <a href="{{ url_for('habit_planner_page', patient_id=patient.patient_id) }}" class="btn btn-secondary">
+          <i data-lucide="calendar"></i>
+          <span>7-Day Habit Planner</span>
+        </a>
+        <form action="{{ url_for('repredict_patient', patient_id=patient.patient_id) }}" method="POST" style="display: inline;">
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="sparkles"></i>
+            <span>Re-Evaluate Risk</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Clinical Metrics Banner -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-info">
+        <h3>Blood Glucose</h3>
+        <div class="metric-value">{{ patient.blood_glucose_level }} <span style="font-size: 0.9rem; font-weight: 500;">mg/dL</span></div>
+        <div class="metric-sub">{% if patient.blood_glucose_level >= 200 %}Elevated (High Risk){% elif patient.blood_glucose_level >= 140 %}Impaired tolerance{% else %}Standard range{% endif %}</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="droplet"></i>
+      </div>
+    </div>
+
+    <div class="metric-card accent-indigo">
+      <div class="metric-info">
+        <h3>HbA1c Level</h3>
+        <div class="metric-value">{{ patient.hba1c_level }}%</div>
+        <div class="metric-sub">{% if patient.hba1c_level >= 6.5 %}Diagnostic tier (>=6.5%){% elif patient.hba1c_level >= 5.7 %}Prediabetes (5.7-6.4%){% else %}Normal (&lt;5.7%){% endif %}</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="percent"></i>
+      </div>
+    </div>
+
+    <div class="metric-card accent-amber">
+      <div class="metric-info">
+        <h3>Body Mass Index</h3>
+        <div class="metric-value">{{ patient.bmi }} <span style="font-size: 0.9rem; font-weight: 500;">kg/m²</span></div>
+        <div class="metric-sub">{% if patient.bmi >= 30 %}Obese classification{% elif patient.bmi >= 25 %}Overweight{% else %}Normal range{% endif %}</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="scale"></i>
+      </div>
+    </div>
+
+    <div class="metric-card {% if patient.latest_prediction == 'Higher Risk' %}accent-rose{% endif %}">
+      <div class="metric-info">
+        <h3>Latest Risk Status</h3>
+        <div class="metric-value" style="font-size: 1.35rem;">
+          {{ patient.latest_prediction or 'Pending' }}
+        </div>
+        <div class="metric-sub">
+          {% if patient.latest_probability is not none %}Estimated Risk: {{ patient.latest_probability }}%{% else %}Inference awaiting{% endif %}
+        </div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="shield-alert"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health Progress Tracker (Date-Wise Historical Trends) -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="trending-up" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Health Progress Tracker (Date-Wise Trends)</span>
+        </h4>
+        <span class="card-subtitle">
+          Observed longitudinal trajectory of glucose readings and calibrated risk estimates across repeated visits.
+        </span>
+      </div>
+      <span class="badge badge-lavender">{{ history.predictions|length }} Historical Evaluations</span>
+    </div>
+
+    <div class="charts-grid-2">
+      <!-- Glucose Trend -->
+      <div>
+        <h5 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Blood Glucose History (mg/dL)</h5>
+        <div class="chart-container" style="height: 240px;">
+          <canvas id="chartPatientGlucose"></canvas>
+        </div>
+      </div>
+
+      <!-- Risk Trend -->
+      <div>
+        <h5 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">Predicted Risk Probability (%)</h5>
+        <div class="chart-container" style="height: 240px;">
+          <canvas id="chartPatientRisk"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Historical Predictions Log -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="history" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Historical Predictions Record</span>
+        </h4>
+        <span class="card-subtitle">Permanent chronological log — prior evaluations are never overwritten</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Prediction Date</th>
+            <th>Predicted Category</th>
+            <th>Calibrated Probability</th>
+            <th>Model Version</th>
+            <th>Snapshot Features</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if history.predictions %}
+            {% for pred in history.predictions %}
+              <tr>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">{{ pred.prediction_date }}</td>
+                <td>
+                  {% if pred.prediction_category == 'Higher Risk' %}
+                    <span class="badge badge-high">Higher Risk</span>
+                  {% else %}
+                    <span class="badge badge-low">Lower Risk</span>
+                  {% endif %}
+                </td>
+                <td><strong>{{ pred.risk_probability }}%</strong></td>
+                <td><span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;">{{ pred.model_version }}</span></td>
+                <td style="font-size: 0.78rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace;">
+                  {{ pred.features_json }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                No previous predictions found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Audit Trail Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="file-check-2" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Patient Record Audit Trail</span>
+        </h4>
+        <span class="card-subtitle">Compliance history recording modifications, timestamps, and updated fields</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>Reason / Note</th>
+            <th>Fields Modified (Previous vs Updated)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if history.audit_logs %}
+            {% for log in history.audit_logs %}
+              <tr>
+                <td style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">{{ log.timestamp }}</td>
+                <td><span class="badge badge-lavender">{{ log.action }}</span></td>
+                <td>{{ log.user_note or 'Logged event' }}</td>
+                <td style="font-size: 0.78rem; font-family: 'IBM Plex Mono', monospace; color: var(--text-muted);">
+                  {{ log.fields_changed }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                No audit entries found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/patient_charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const historyData = {{ history.predictions | tojson }};
+    initPatientProgressCharts(historyData);
+  });
+</script>
+{% endblock %}

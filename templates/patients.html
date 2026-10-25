@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Records — Diavision{% endblock %}
+{% block page_title %}Patient Records Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Controls Strip -->
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <!-- Search & Filter Form -->
+    <form action="{{ url_for('patients_page') }}" method="GET" style="display: flex; gap: 0.75rem; flex-wrap: wrap; flex: 1;">
+      <div style="position: relative; min-width: 240px; flex: 1;">
+        <i data-lucide="search" class="search-icon" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; color: var(--text-light);"></i>
+        <input type="text" name="search" value="{{ search_query }}" class="form-control" style="padding-left: 2.25rem;" placeholder="Search Patient ID or Name...">
+      </div>
+
+      <select name="risk" class="form-control form-select" style="width: 170px;" onchange="this.form.submit()">
+        <option value="all" {% if risk_filter == 'all' or not risk_filter %}selected{% endif %}>All Risk Categories</option>
+        <option value="Higher Risk" {% if risk_filter == 'Higher Risk' %}selected{% endif %}>Higher Risk Only</option>
+        <option value="Lower Risk" {% if risk_filter == 'Lower Risk' %}selected{% endif %}>Lower Risk Only</option>
+      </select>
+
+      <button type="submit" class="btn btn-secondary">
+        <i data-lucide="filter"></i>
+        <span>Filter</span>
+      </button>
+
+      {% if search_query or (risk_filter and risk_filter != 'all') %}
+        <a href="{{ url_for('patients_page') }}" class="btn btn-secondary" title="Clear Filters">
+          <i data-lucide="x"></i>
+        </a>
+      {% endif %}
+    </form>
+
+    <!-- Export & Add Actions -->
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('export_patients_csv') }}" class="btn btn-secondary" title="Export patient list to CSV">
+        <i data-lucide="download"></i>
+        <span>Export CSV</span>
+      </a>
+      <a href="{{ url_for('predict_page') }}" class="btn btn-primary">
+        <i data-lucide="user-plus"></i>
+        <span>New Patient</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Records Table -->
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Name</th>
+          <th>Gender / Age</th>
+          <th>Glucose (mg/dL)</th>
+          <th>HbA1c (%)</th>
+          <th>BMI</th>
+          <th>Latest Prediction</th>
+          <th>Risk %</th>
+          <th>Prediction Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if paginated.patients %}
+          {% for p in paginated.patients %}
+            <tr>
+              <td><span class="patient-id-badge">{{ p.patient_id }}</span></td>
+              <td>
+                <span style="font-weight: 600;">{{ p.name or 'Anonymized' }}</span>
+              </td>
+              <td>{{ p.gender }} • {{ p.age|int }}y</td>
+              <td><strong>{{ p.blood_glucose_level }}</strong></td>
+              <td>{{ p.hba1c_level }}%</td>
+              <td>{{ p.bmi }}</td>
+              <td>
+                {% if p.latest_prediction == 'Higher Risk' %}
+                  <span class="badge badge-high"><i data-lucide="alert-circle" style="width: 12px;"></i> Higher Risk</span>
+                {% elif p.latest_prediction == 'Lower Risk' %}
+                  <span class="badge badge-low"><i data-lucide="check-circle" style="width: 12px;"></i> Lower Risk</span>
+                {% else %}
+                  <span class="badge" style="background: var(--bg-secondary); color: var(--text-muted);">Not Assessed</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if p.latest_probability is not none %}
+                  <strong style="color: {% if p.latest_prediction == 'Higher Risk' %}var(--risk-high){% else %}var(--teal-primary){% endif %};">
+                    {{ p.latest_probability }}%
+                  </strong>
+                {% else %}
+                  <span style="color: var(--text-light);">-</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.8rem; color: var(--text-muted);">
+                {{ p.latest_prediction_date or p.created_at }}
+              </td>
+              <td>
+                <div style="display: flex; gap: 0.35rem;">
+                  <a href="{{ url_for('patient_detail_page', patient_id=p.patient_id) }}" class="btn btn-secondary btn-sm" title="View Details & Health Progress Tracker">
+                    <i data-lucide="eye" style="width: 14px;"></i>
+                  </a>
+                  <button type="button" class="btn btn-secondary btn-sm" title="Edit Patient Record" 
+                          onclick="openEditModal({{ p | tojson | forceescape }})">
+                    <i data-lucide="edit-3" style="width: 14px;"></i>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" title="Delete Patient Record" 
+                          onclick="openDeleteModal('{{ p.patient_id }}')">
+                    <i data-lucide="trash-2" style="width: 14px; color: var(--risk-high);"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              No patient records found matching the specified search or filter criteria.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">
+    <span style="font-size: 0.85rem; color: var(--text-muted);">
+      Showing page {{ paginated.page }} of {{ paginated.total_pages }} ({{ paginated.total_count }} total patients)
+    </span>
+
+    <div style="display: flex; gap: 0.5rem;">
+      {% if paginated.page > 1 %}
+        <a href="{{ url_for('patients_page', page=paginated.page - 1, search=search_query, risk=risk_filter) }}" class="btn btn-secondary btn-sm">
+          <i data-lucide="chevron-left"></i>
+          <span>Previous</span>
+        </a>
+      {% endif %}
+
+      {% if paginated.page < paginated.total_pages %}
+        <a href="{{ url_for('patients_page', page=paginated.page + 1, search=search_query, risk=risk_filter) }}" class="btn btn-secondary btn-sm">
+          <span>Next</span>
+          <i data-lucide="chevron-right"></i>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div class="modal-overlay" id="editPatientModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Patient Record</h3>
+      <button type="button" class="btn-icon" onclick="closeModal('editPatientModal')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <form action="{{ url_for('update_patient') }}" method="POST">
+      <div class="modal-body">
+        <input type="hidden" name="patient_id" id="edit_patient_id">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Patient Name</label>
+            <input type="text" name="name" id="edit_name" class="form-control" placeholder="Optional name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input type="number" name="age" id="edit_age" class="form-control" min="1" max="120" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select name="gender" id="edit_gender" class="form-control form-select" required>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Blood Glucose (mg/dL)</label>
+            <input type="number" name="blood_glucose_level" id="edit_glucose" class="form-control" min="50" max="450" step="1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">HbA1c Level (%)</label>
+            <input type="number" name="hba1c_level" id="edit_hba1c" class="form-control" min="3.5" max="16.0" step="0.1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">BMI (kg/m²)</label>
+            <input type="number" name="bmi" id="edit_bmi" class="form-control" min="10" max="90" step="0.01" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Hypertension</label>
+            <select name="hypertension" id="edit_hypertension" class="form-control form-select">
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Heart Disease</label>
+            <select name="heart_disease" id="edit_heart_disease" class="form-control form-select">
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <label class="form-label">Audit Note / Reason for Update</label>
+          <input type="text" name="user_note" class="form-control" placeholder="e.g. Updated follow-up lab readings" value="Updated patient clinical parameters">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editPatientModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes & Audit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deletePatientModal">
+  <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 class="modal-title" style="color: var(--risk-high);">Confirm Patient Deletion</h3>
+      <button type="button" class="btn-icon" onclick="closeModal('deletePatientModal')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <form action="{{ url_for('delete_patient') }}" method="POST">
+      <div class="modal-body">
+        <input type="hidden" name="patient_id" id="delete_patient_id">
+        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-main);">
+          Are you sure you want to permanently delete patient <strong id="delete_patient_label"></strong>?
+        </p>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem;">
+          This will permanently remove the patient record, complete historical predictions, audit trail, and wellness logs. This action cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('deletePatientModal')">Cancel</button>
+        <button type="submit" class="btn btn-danger">Confirm Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function openEditModal(patient) {
+    document.getElementById('edit_patient_id').value = patient.patient_id;
+    document.getElementById('edit_name').value = patient.name || '';
+    document.getElementById('edit_age').value = patient.age;
+    document.getElementById('edit_gender').value = patient.gender;
+    document.getElementById('edit_glucose').value = patient.blood_glucose_level;
+    document.getElementById('edit_hba1c').value = patient.hba1c_level;
+    document.getElementById('edit_bmi').value = patient.bmi;
+    document.getElementById('edit_hypertension').value = patient.hypertension;
+    document.getElementById('edit_heart_disease').value = patient.heart_disease;
+    openModal('editPatientModal');
+  }
+
+  function openDeleteModal(patientId) {
+    document.getElementById('delete_patient_id').value = patientId;
+    document.getElementById('delete_patient_label').textContent = patientId;
+    openModal('deletePatientModal');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}7-Day Healthy Habit Planner — Diavision{% endblock %}
+{% block page_title %}7-Day Wellness & Healthy Habit Planner{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Header Card -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h3 class="card-title">
+          <i data-lucide="calendar-check" style="color: var(--teal-primary);"></i>
+          <span>Weekly Behavioral Wellness Tracker</span>
+        </h3>
+        <p class="card-subtitle">
+          Track daily walking, hydration, sleep, and balanced meal habits to support long-term metabolic health.
+        </p>
+      </div>
+
+      <!-- Patient Select / Filter Form -->
+      <form action="{{ url_for('habit_planner_page') }}" method="GET" style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Patient:</label>
+        <select name="patient_id" class="form-control form-select" style="width: 180px;" onchange="this.form.submit()">
+          {% for p in patients_list %}
+            <option value="{{ p.patient_id }}" {% if p.patient_id == selected_patient_id %}selected{% endif %}>
+              {{ p.patient_id }} {% if p.name %}({{ p.name }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <!-- Progress Meter -->
+    <div style="margin-top: 1.5rem; background: var(--bg-secondary); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">
+          Weekly Goal Completion: {{ plan.progress_percent }}%
+        </span>
+        <span style="font-size: 0.82rem; color: var(--text-muted);">
+          Week of {{ plan.week_start_date }}
+        </span>
+      </div>
+      <div class="progress-track" style="height: 12px;">
+        <div class="progress-fill" style="width: {{ plan.progress_percent }}%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habit Grid Form -->
+  <div class="card">
+    <form action="{{ url_for('save_habit_plan') }}" method="POST">
+      <input type="hidden" name="patient_id" value="{{ selected_patient_id }}">
+      <input type="hidden" name="week_start_date" value="{{ plan.week_start_date }}">
+
+      <div class="table-responsive">
+        <table class="habit-grid-table">
+          <thead>
+            <tr style="background: var(--bg-secondary);">
+              <th style="min-width: 250px;">Healthy Daily Habit Goal</th>
+              <th>Mon</th>
+              <th>Tue</th>
+              <th>Wed</th>
+              <th>Thu</th>
+              <th>Fri</th>
+              <th>Sat</th>
+              <th>Sun</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Habit 1: Walking -->
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="activity" style="width: 18px; color: var(--teal-primary);"></i>
+                  <div>
+                    <strong>Daily Movement</strong>
+                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">20–30 min brisk walk or light activity</span>
+                  </div>
+                </div>
+              </td>
+              {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                <td>
+                  <input type="checkbox" name="habit_walk_{{ day }}" class="habit-checkbox" 
+                         {% if plan.grid.walk and plan.grid.walk[day] %}checked{% endif %}>
+                </td>
+              {% endfor %}
+            </tr>
+
+            <!-- Habit 2: Hydration -->
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="droplet" style="width: 18px; color: #3b82f6;"></i>
+                  <div>
+                    <strong>Optimal Hydration</strong>
+                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">8 glasses water, no sweetened drinks</span>
+                  </div>
+                </div>
+              </td>
+              {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                <td>
+                  <input type="checkbox" name="habit_water_{{ day }}" class="habit-checkbox"
+                         {% if plan.grid.water and plan.grid.water[day] %}checked{% endif %}>
+                </td>
+              {% endfor %}
+            </tr>
+
+            <!-- Habit 3: Balanced Meals -->
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="utensils" style="width: 18px; color: var(--risk-warning);"></i>
+                  <div>
+                    <strong>Balanced Plate</strong>
+                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">Fiber-first salad, roti/rice control, lentils</span>
+                  </div>
+                </div>
+              </td>
+              {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                <td>
+                  <input type="checkbox" name="habit_meal_{{ day }}" class="habit-checkbox"
+                         {% if plan.grid.meal and plan.grid.meal[day] %}checked{% endif %}>
+                </td>
+              {% endfor %}
+            </tr>
+
+            <!-- Habit 4: Sleep -->
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="moon" style="width: 18px; color: var(--lavender-accent);"></i>
+                  <div>
+                    <strong>Restorative Sleep</strong>
+                    <span style="display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">7–8 hours regular sleep schedule</span>
+                  </div>
+                </div>
+              </td>
+              {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                <td>
+                  <input type="checkbox" name="habit_sleep_{{ day }}" class="habit-checkbox"
+                         {% if plan.grid.sleep and plan.grid.sleep[day] %}checked{% endif %}>
+                </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem; gap: 1rem;">
+        <button type="submit" class="btn btn-primary">
+          <i data-lucide="save"></i>
+          <span>Save Weekly Habit Progress</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

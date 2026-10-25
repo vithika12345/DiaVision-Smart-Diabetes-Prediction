@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Management — Diavision{% endblock %}
+{% block page_title %}Dataset Management & ML Pipeline Retraining{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Dual Cards: Upload / Import Operations -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.5rem;">
+    
+    <!-- Operation A: Import Historical Records -->
+    <div class="card" style="border-top: 4px solid var(--teal-primary);">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">
+            <i data-lucide="folder-input" style="color: var(--teal-primary);"></i>
+            <span>Operation A: Import Patient Records</span>
+          </h3>
+          <span class="card-subtitle">
+            Upload patient spreadsheets (CSV or Excel) into the SQLite database.
+          </span>
+        </div>
+        <span class="badge badge-low">Patient DB</span>
+      </div>
+
+      <form action="{{ url_for('import_dataset_records') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label">
+            <span>Select CSV or Excel File (.csv, .xlsx, .xls)</span>
+          </label>
+          <input type="file" name="dataset_file" class="form-control" accept=".csv,.xlsx,.xls" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label">Duplicate Patient ID Handling</label>
+          <select name="duplicate_action" class="form-control form-select">
+            <option value="skip">Skip duplicates (Preserve existing record)</option>
+            <option value="generate_new">Assign new DIA-XXXXX permanent ID</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+          <input type="checkbox" name="perform_predictions" id="chk_predict" checked class="habit-checkbox">
+          <label for="chk_predict" style="font-size: 0.85rem; color: var(--text-main); cursor: pointer;">
+            Automatically generate initial ML risk predictions for eligible records
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <a href="{{ url_for('download_sample_template') }}" class="btn btn-secondary btn-sm">
+            <i data-lucide="download"></i>
+            <span>Sample Template</span>
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="upload"></i>
+            <span>Import Records to Database</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Operation B: Upload Labeled Training Dataset -->
+    <div class="card" style="border-top: 4px solid var(--lavender-accent);">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">
+            <i data-lucide="cpu" style="color: var(--lavender-accent);"></i>
+            <span>Operation B: Retrain ML Model</span>
+          </h3>
+          <span class="card-subtitle">
+            Train and benchmark classifiers on a new labeled dataset with versioned backup.
+          </span>
+        </div>
+        <span class="badge badge-lavender">ML Retraining</span>
+      </div>
+
+      <form action="{{ url_for('retrain_dataset_model') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label">
+            <span>Select Labeled Dataset File (.csv, .xlsx, .xls)</span>
+          </label>
+          <input type="file" name="training_file" class="form-control" accept=".csv,.xlsx,.xls" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label">
+            <span>Target Column Name</span>
+            <span class="form-hint">Binary outcome (0 or 1)</span>
+          </label>
+          <input type="text" name="target_column" class="form-control" value="diabetes" required>
+        </div>
+
+        <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.82rem; color: var(--text-muted);">
+          <i data-lucide="shield-check" style="width: 14px; vertical-align: middle; color: var(--teal-primary);"></i>
+          The system creates an automated versioned backup in <code>models/versions/</code> before replacing the active pipeline.
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, var(--lavender-accent), #4f46e5);">
+            <i data-lucide="refresh-cw"></i>
+            <span>Benchmark & Retrain Model</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Uploaded Dataset Inspection & Preview (If provided in session) -->
+  {% if inspection %}
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h4 class="card-title">
+            <i data-lucide="file-spreadsheet" style="width: 18px; color: var(--teal-primary);"></i>
+            <span>Dataset Preview: {{ inspection.filename }}</span>
+          </h4>
+          <span class="card-subtitle">
+            {{ inspection.row_count }} Rows • {{ inspection.columns|length }} Columns • {{ inspection.duplicate_count }} Duplicate Rows
+          </span>
+        </div>
+      </div>
+
+      <!-- Feature Compatibility Badges -->
+      <div style="margin-bottom: 1.25rem;">
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">
+          Feature Compatibility Checklist:
+        </span>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          {% for feat in inspection.matched_features %}
+            <span class="badge badge-low"><i data-lucide="check" style="width: 12px;"></i> {{ feat }}</span>
+          {% endfor %}
+          {% for missing in inspection.missing_features %}
+            <span class="badge badge-high"><i data-lucide="alert-circle" style="width: 12px;"></i> Missing: {{ missing }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Sample Rows Table -->
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              {% for col in inspection.columns %}
+                <th>{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in inspection.preview_rows %}
+              <tr>
+                {% for col in inspection.columns %}
+                  <td>{{ row[col] }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Upload History Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="history" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Dataset Upload & Ingestion History</span>
+        </h4>
+        <span class="card-subtitle">Log of all previously imported spreadsheet files</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Uploaded At</th>
+            <th>Total Rows</th>
+            <th>Imported Count</th>
+            <th>Skipped Count</th>
+            <th>Operation Type</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if uploads %}
+            {% for u in uploads %}
+              <tr>
+                <td style="font-weight: 600;">{{ u.filename }}</td>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">{{ u.uploaded_at }}</td>
+                <td>{{ u.row_count }}</td>
+                <td><span style="color: var(--teal-primary); font-weight: 600;">{{ u.imported_count }}</span></td>
+                <td><span style="color: var(--text-light);">{{ u.skipped_count }}</span></td>
+                <td><span class="badge badge-lavender">{{ u.dataset_type }}</span></td>
+                <td>
+                  <span class="badge badge-low">{{ u.status }}</span>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                No datasets uploaded yet.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

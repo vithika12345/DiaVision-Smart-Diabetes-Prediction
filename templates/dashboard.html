@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Diavision Analytics{% endblock %}
+{% block page_title %}Patient Records & Prediction Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Metrics Row -->
+<div class="metrics-grid">
+  <div class="metric-card accent-indigo">
+    <div class="metric-info">
+      <h3>Total Patients</h3>
+      <div class="metric-value">{{ stats.total_patients }}</div>
+      <div class="metric-sub">Registered in local SQLite DB</div>
+    </div>
+    <div class="metric-icon-box">
+      <i data-lucide="users"></i>
+    </div>
+  </div>
+
+  <div class="metric-card accent-rose">
+    <div class="metric-info">
+      <h3>Higher Risk Cases</h3>
+      <div class="metric-value">{{ stats.high_risk_patients }}</div>
+      <div class="metric-sub">Requiring medical review</div>
+    </div>
+    <div class="metric-icon-box">
+      <i data-lucide="alert-triangle"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h3>Lower Risk Cases</h3>
+      <div class="metric-value">{{ stats.low_risk_patients }}</div>
+      <div class="metric-sub">Routine monitoring</div>
+    </div>
+    <div class="metric-icon-box">
+      <i data-lucide="shield-check"></i>
+    </div>
+  </div>
+
+  <div class="metric-card accent-amber">
+    <div class="metric-info">
+      <h3>Total Predictions</h3>
+      <div class="metric-value">{{ stats.total_predictions }}</div>
+      <div class="metric-sub">Historical inference log</div>
+    </div>
+    <div class="metric-icon-box">
+      <i data-lucide="activity"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h3>Datasets Uploaded</h3>
+      <div class="metric-value">{{ stats.total_datasets }}</div>
+      <div class="metric-sub">Imported historical batches</div>
+    </div>
+    <div class="metric-icon-box">
+      <i data-lucide="database"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Action Strip -->
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Clinical Risk Inference Station</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+        Generate new patient risk predictions, import CSV/Excel health records, or explore model explainability.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('predict_page') }}" class="btn btn-primary">
+        <i data-lucide="plus-circle"></i>
+        <span>New Patient Intake</span>
+      </a>
+      <a href="{{ url_for('datasets_page') }}" class="btn btn-secondary">
+        <i data-lucide="upload"></i>
+        <span>Import Dataset</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid Row 1 -->
+<div class="charts-grid-3">
+  <!-- Chart 1: Prediction Distribution -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="pie-chart" style="width: 18px; color: var(--teal-primary);"></i> Risk Distribution</h4>
+        <span class="card-subtitle">Lower vs Higher Risk Patients</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartPredDist"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Glucose Levels -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="droplet" style="width: 18px; color: var(--teal-primary);"></i> Glucose Breakdown</h4>
+        <span class="card-subtitle">Fasting/Random Clinical Tiers (mg/dL)</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartGlucoseDist"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: BMI Distribution -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="scale" style="width: 18px; color: var(--teal-primary);"></i> BMI Classification</h4>
+        <span class="card-subtitle">WHO Standard Categories</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartBmiDist"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid Row 2 -->
+<div class="charts-grid-3">
+  <!-- Chart 4: Age Distribution -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="bar-chart-2" style="width: 18px; color: var(--teal-primary);"></i> Age Demographics</h4>
+        <span class="card-subtitle">Registered Patients by Age Bucket</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartAgeDist"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 5: Risk by Age Group -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="layers" style="width: 18px; color: var(--teal-primary);"></i> Risk by Age Tier</h4>
+        <span class="card-subtitle">Lower vs Higher Risk Comparison</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartRiskByAge"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 6: Trends Over Time -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="trending-up" style="width: 18px; color: var(--teal-primary);"></i> Prediction Activity</h4>
+        <span class="card-subtitle">Recent Date-wise Registrations</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chartTrends"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity & Patients Table -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h4 class="card-title"><i data-lucide="clock" style="width: 18px; color: var(--teal-primary);"></i> Recent Patient Activity</h4>
+      <span class="card-subtitle">Real-time audit log of registrations, predictions, and modifications</span>
+    </div>
+    <a href="{{ url_for('patients_page') }}" class="btn btn-secondary btn-sm">
+      <span>View All Patients</span>
+      <i data-lucide="arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Action</th>
+          <th>Latest Risk Status</th>
+          <th>Notes</th>
+          <th>Timestamp</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if stats.recent_activity %}
+          {% for act in stats.recent_activity %}
+            <tr>
+              <td><span class="patient-id-badge">{{ act.patient_id }}</span></td>
+              <td>
+                <span class="badge {% if act.action == 'PREDICT' %}badge-lavender{% elif act.action == 'CREATE' %}badge-low{% else %}badge-warning{% endif %}">
+                  {{ act.action }}
+                </span>
+              </td>
+              <td>
+                {% if act.latest_prediction == 'Higher Risk' %}
+                  <span class="badge badge-high"><i data-lucide="alert-circle" style="width: 12px;"></i> Higher Risk</span>
+                {% elif act.latest_prediction == 'Lower Risk' %}
+                  <span class="badge badge-low"><i data-lucide="check-circle" style="width: 12px;"></i> Lower Risk</span>
+                {% else %}
+                  <span class="badge" style="background: var(--bg-secondary); color: var(--text-muted);">Unclassified</span>
+                {% endif %}
+              </td>
+              <td>{{ act.user_note or 'Record logged' }}</td>
+              <td style="color: var(--text-muted); font-size: 0.82rem;">{{ act.timestamp }}</td>
+              <td>
+                <a href="{{ url_for('patient_detail_page', patient_id=act.patient_id) }}" class="btn btn-secondary btn-sm" title="View Patient Details">
+                  <i data-lucide="eye" style="width: 14px;"></i>
+                  <span>Profile</span>
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+              No activity records available yet.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const chartData = {{ stats.charts | tojson }};
+    initDashboardCharts(chartData);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{
+  "features": [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "smoking_history",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "ranges": {
+    "age": {
+      "min": 1,
+      "max": 120,
+      "unit": "years",
+      "label": "Age"
+    },
+    "gender": {
+      "options": [
+        "Female",
+        "Male",
+        "Other"
+      ],
+      "label": "Gender"
+    },
+    "hypertension": {
+      "options": [
+        0,
+        1
+      ],
+      "labels": {
+        "0": "No",
+        "1": "Yes"
+      },
+      "label": "Hypertension"
+    },
+    "heart_disease": {
+      "options": [
+        0,
+        1
+      ],
+      "labels": {
+        "0": "No",
+        "1": "Yes"
+      },
+      "label": "Heart Disease"
+    },
+    "smoking_history": {
+      "options": [
+        "never",
+        "No Info",
+        "current",
+        "former",
+        "ever",
+        "not current"
+      ],
+      "labels": {
+        "never": "Never Smoked",
+        "No Info": "No Information",
+        "current": "Current Smoker",
+        "former": "Former Smoker",
+        "ever": "Ever Smoked",
+        "not current": "Not Currently Smoking"
+      },
+      "label": "Smoking History"
+    },
+    "bmi": {
+      "min": 10.0,
+      "max": 90.0,
+      "unit": "kg/m\u00b2",
+      "normal_range": [
+        18.5,
+        24.9
+      ],
+      "label": "Body Mass Index (BMI)"
+    },
+    "HbA1c_level": {
+      "min": 3.5,
+      "max": 16.0,
+      "unit": "%",
+      "normal_range": [
+        4.0,
+        5.6
+      ],
+      "prediabetes": [
+        5.7,
+        6.4
+      ],
+      "diabetes_criterion": 6.5,
+      "label": "HbA1c Level"
+    },
+    "blood_glucose_level": {
+      "min": 50,
+      "max": 450,
+      "unit": "mg/dL",
+      "normal_range": [
+        70,
+        99
+      ],
+      "prediabetes": [
+        100,
+        125
+      ],
+      "elevated": 140,
+      "critical": 300,
+      "label": "Blood Glucose Level"
+    }
+  }
+}

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Visit Summary — {{ summary.patient.patient_id }} — Diavision</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 2.5rem;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.5;
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0d9488;
+      padding-bottom: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .brand-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .brand-subtitle {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .patient-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.75rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .data-item span {
+      display: block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .data-item strong {
+      font-size: 1.05rem;
+      color: #0f172a;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0d9488;
+      margin: 1.5rem 0 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.35rem;
+    }
+
+    .measurements-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+    }
+
+    .measurements-table th, .measurements-table td {
+      border: 1px solid #e2e8f0;
+      padding: 0.65rem 0.85rem;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    .measurements-table th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .questions-list, .checklist-list {
+      padding-left: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .questions-list li, .checklist-list li {
+      margin-bottom: 0.5rem;
+      font-size: 0.92rem;
+    }
+
+    .disclaimer {
+      border: 1px dashed #cbd5e1;
+      background: #f8fafc;
+      border-radius: 6px;
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 2rem;
+    }
+
+    .print-bar {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      background: #0d9488;
+      color: white;
+      text-decoration: none;
+    }
+
+    @media print {
+      .print-bar { display: none !important; }
+      body { padding: 0.5in; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-bar">
+    <button class="btn" onclick="window.print()">Print This Clinical Summary</button>
+  </div>
+
+  <div class="report-header">
+    <div>
+      <div class="brand-title">Diavision — Clinical Consultation Summary</div>
+      <div class="brand-subtitle">Physician Consultation Handout & Health Record Profile</div>
+    </div>
+    <div style="text-align: right; font-size: 0.82rem; color: #64748b;">
+      Generated: {{ summary.patient.latest_prediction_date or summary.patient.updated_at }}<br>
+      Model Version: {{ summary.latest_prediction.model_version|default('1.0') }}
+    </div>
+  </div>
+
+  <!-- Patient Identification Box -->
+  <div class="patient-box">
+    <div class="data-item">
+      <span>Patient Identifier</span>
+      <strong style="font-family: 'IBM Plex Mono', monospace;">{{ summary.patient.patient_id }}</strong>
+    </div>
+    <div class="data-item">
+      <span>Patient Name</span>
+      <strong>{{ summary.patient.name or 'Anonymized' }}</strong>
+    </div>
+    <div class="data-item">
+      <span>Demographics</span>
+      <strong>{{ summary.patient.gender }} • {{ summary.patient.age|int }} Years</strong>
+    </div>
+    <div class="data-item">
+      <span>Latest Algorithmic Assessment</span>
+      <strong style="color: {% if summary.patient.latest_prediction == 'Higher Risk' %}#e11d48{% else %}#0d9488{% endif %};">
+        {{ summary.patient.latest_prediction or 'Unassessed' }}
+        {% if summary.patient.latest_probability is not none %}({{ summary.patient.latest_probability }}%){% endif %}
+      </strong>
+    </div>
+  </div>
+
+  <!-- Recorded Clinical Parameters -->
+  <div class="section-title">Recorded Biomarkers & Clinical Measurements</div>
+  <table class="measurements-table">
+    <thead>
+      <tr>
+        <th>Biomarker / Feature</th>
+        <th>Recorded Value</th>
+        <th>Clinical Reference Range</th>
+        <th>Screening Observation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Blood Glucose Level</td>
+        <td><strong>{{ summary.patient.blood_glucose_level }} mg/dL</strong></td>
+        <td>70–99 (Fasting) / &lt;140 (Random)</td>
+        <td>
+          {% if summary.patient.blood_glucose_level >= 200 %}
+            Markedly elevated (diabetes threshold)
+          {% elif summary.patient.blood_glucose_level >= 140 %}
+            Impaired glucose tolerance tier
+          {% else %}
+            Within standard bounds
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>HbA1c Level</td>
+        <td><strong>{{ summary.patient.hba1c_level }}%</strong></td>
+        <td>&lt;5.7% (Normal) / 5.7–6.4% (Prediabetes)</td>
+        <td>
+          {% if summary.patient.hba1c_level >= 6.5 %}
+            Diagnostic criterion tier (>=6.5%)
+          {% elif summary.patient.hba1c_level >= 5.7 %}
+            Prediabetes range
+          {% else %}
+            Normal range
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Body Mass Index (BMI)</td>
+        <td><strong>{{ summary.patient.bmi }} kg/m²</strong></td>
+        <td>18.5 – 24.9 kg/m²</td>
+        <td>
+          {% if summary.patient.bmi >= 30 %}
+            Classified as Obese (Insulin resistance factor)
+          {% elif summary.patient.bmi >= 25 %}
+            Overweight category
+          {% else %}
+            Optimal healthy range
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Hypertension</td>
+        <td><strong>{{ 'Diagnosed (Yes)' if summary.patient.hypertension == 1 else 'None (No)' }}</strong></td>
+        <td>Normotensive &lt;120/80 mmHg</td>
+        <td>Cardiovascular & metabolic comorbidity flag</td>
+      </tr>
+      <tr>
+        <td>Heart Disease</td>
+        <td><strong>{{ 'Diagnosed (Yes)' if summary.patient.heart_disease == 1 else 'None (No)' }}</strong></td>
+        <td>No active cardiac pathology</td>
+        <td>Elevates overall vascular vulnerability</td>
+      </tr>
+      <tr>
+        <td>Smoking History</td>
+        <td><strong>{{ summary.patient.smoking_history }}</strong></td>
+        <td>Non-smoker</td>
+        <td>Nicotine impairs cellular insulin sensitivity</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Questions to Discuss with the Doctor -->
+  <div class="section-title">Suggested Inquiries to Discuss with Your Physician</div>
+  <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">
+    You may present these specific questions to your doctor to guide your clinical evaluation:
+  </p>
+  <ul class="questions-list">
+    {% for q in summary.questions_to_ask %}
+      <li>{{ q }}</li>
+    {% endfor %}
+  </ul>
+
+  <!-- Consultation Checklist -->
+  <div class="section-title">Preparation Checklist for the Appointment</div>
+  <ul class="checklist-list">
+    {% for item in summary.consultation_checklist %}
+      <li>☐ {{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <!-- Prominent Medical Disclaimer -->
+  <div class="disclaimer">
+    <strong>Medical Safety Notice:</strong> Diavision is an educational machine learning decision-support prototype. Its predictions are based on statistical pattern estimation and are not a confirmed medical diagnosis. Health guidance provided here is general educational information. Please discuss all laboratory findings and treatment plans directly with a licensed physician. Do not alter prescribed medications independently.
+  </div>
+
+</body>
+</html>

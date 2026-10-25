@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics — Diavision{% endblock %}
+{% block page_title %}Clinical Reports & Healthcare Analytics{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Downloadable Reports Grid -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i data-lucide="file-down" style="color: var(--teal-primary);"></i>
+          <span>Downloadable Data Reports</span>
+        </h3>
+        <p class="card-subtitle">
+          Export structured clinical records, audit logs, and benchmark reports in CSV format.
+        </p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+      <!-- Report 1: Patients CSV -->
+      <div style="padding: 1.25rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i data-lucide="users" style="color: var(--teal-primary);"></i>
+            <strong style="font-size: 1rem; color: var(--text-main);">Full Patient Registry CSV</strong>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 1rem;">
+            Exports all registered patient profiles, physiological measurements, latest risk predictions, and registration sources.
+          </p>
+        </div>
+        <a href="{{ url_for('export_patients_csv') }}" class="btn btn-secondary btn-sm" style="align-self: flex-start;">
+          <i data-lucide="download"></i>
+          <span>Download Patients CSV</span>
+        </a>
+      </div>
+
+      <!-- Report 2: Audit Logs CSV -->
+      <div style="padding: 1.25rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i data-lucide="file-check-2" style="color: var(--lavender-accent);"></i>
+            <strong style="font-size: 1rem; color: var(--text-main);">Compliance Audit Log CSV</strong>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 1rem;">
+            Complete chronological trail of all patient updates, field modifications, and user change notes.
+          </p>
+        </div>
+        <a href="{{ url_for('export_audit_csv') }}" class="btn btn-secondary btn-sm" style="align-self: flex-start;">
+          <i data-lucide="download"></i>
+          <span>Download Audit CSV</span>
+        </a>
+      </div>
+
+      <!-- Report 3: Model Metrics JSON -->
+      <div style="padding: 1.25rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i data-lucide="cpu" style="color: var(--risk-warning);"></i>
+            <strong style="font-size: 1rem; color: var(--text-main);">Model Evaluation Metrics</strong>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 1rem;">
+            Serialized accuracy, recall, ROC curve points, and confusion matrix benchmarks of all compared classifiers.
+          </p>
+        </div>
+        <a href="{{ url_for('export_metrics_json') }}" class="btn btn-secondary btn-sm" style="align-self: flex-start;">
+          <i data-lucide="download"></i>
+          <span>Download Metrics JSON</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analytics Summary Statistics -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="bar-chart-2" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Clinical Cohort Analytics Summary</span>
+        </h4>
+        <span class="card-subtitle">Aggregate metrics calculated directly from the SQLite database</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Metric Indicator</th>
+            <th>Calculated Value</th>
+            <th>Clinical Context</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total Registered Patients</td>
+            <td><strong>{{ stats.total_patients }}</strong></td>
+            <td>Cohort size stored locally in database</td>
+          </tr>
+          <tr>
+            <td>Higher Risk Predictions</td>
+            <td><strong style="color: var(--risk-high);">{{ stats.high_risk_patients }}</strong></td>
+            <td>Cases flagged for confirmatory diagnostic laboratory testing</td>
+          </tr>
+          <tr>
+            <td>Lower Risk Predictions</td>
+            <td><strong style="color: var(--teal-primary);">{{ stats.low_risk_patients }}</strong></td>
+            <td>Cases in baseline bounds; standard preventive habits recommended</td>
+          </tr>
+          <tr>
+            <td>Total Historical Predictions</td>
+            <td><strong>{{ stats.total_predictions }}</strong></td>
+            <td>Includes initial evaluations and repeated follow-up re-evaluations</td>
+          </tr>
+          <tr>
+            <td>Active ML Classifier</td>
+            <td><strong>{{ metrics.selected_model }} ({{ metrics.version }})</strong></td>
+            <td>Trained pipeline prioritizing recall ({{ (metrics.best_metrics.recall * 100)|round(1) }}%)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

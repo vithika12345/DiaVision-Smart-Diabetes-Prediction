@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Prediction — Diavision{% endblock %}
+{% block page_title %}High-Throughput Batch Risk Prediction{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Upload Card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i data-lucide="layers" style="color: var(--teal-primary);"></i>
+          <span>Batch Inference Engine</span>
+        </h3>
+        <p class="card-subtitle">
+          Upload a multi-record CSV or Excel file to generate calibrated predictions and risk assessments in bulk.
+        </p>
+      </div>
+      <a href="{{ url_for('download_sample_template') }}" class="btn btn-secondary btn-sm">
+        <i data-lucide="download"></i>
+        <span>Download CSV Template</span>
+      </a>
+    </div>
+
+    <form action="{{ url_for('process_batch_prediction') }}" method="POST" enctype="multipart/form-data">
+      <div class="form-grid" style="align-items: flex-end;">
+        <div class="form-group" style="flex: 2;">
+          <label class="form-label">
+            <span>Select File (.csv, .xlsx, .xls)</span>
+            <span class="form-hint">Max file size 32 MB</span>
+          </label>
+          <input type="file" name="batch_file" class="form-control" accept=".csv,.xlsx,.xls" required>
+        </div>
+
+        <div class="form-group" style="flex: 1;">
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            <i data-lucide="play"></i>
+            <span>Run Batch Prediction</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Batch Results Section (If processed) -->
+  {% if batch_summary %}
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card accent-indigo">
+        <div class="metric-info">
+          <h3>Total Records Processed</h3>
+          <div class="metric-value">{{ batch_summary.total_rows }}</div>
+          <div class="metric-sub">Rows in uploaded spreadsheet</div>
+        </div>
+        <div class="metric-icon-box">
+          <i data-lucide="file-text"></i>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Eligible / Predicted</h3>
+          <div class="metric-value">{{ batch_summary.eligible_rows }}</div>
+          <div class="metric-sub">Valid clinical parameters</div>
+        </div>
+        <div class="metric-icon-box">
+          <i data-lucide="check-circle-2"></i>
+        </div>
+      </div>
+
+      <div class="metric-card accent-rose">
+        <div class="metric-info">
+          <h3>Predicted Higher Risk</h3>
+          <div class="metric-value">{{ batch_summary.higher_risk_count }}</div>
+          <div class="metric-sub">Identified risk cases</div>
+        </div>
+        <div class="metric-icon-box">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Predicted Lower Risk</h3>
+          <div class="metric-value">{{ batch_summary.lower_risk_count }}</div>
+          <div class="metric-sub">Routine bounds</div>
+        </div>
+        <div class="metric-icon-box">
+          <i data-lucide="shield-check"></i>
+        </div>
+      </div>
+
+      <div class="metric-card accent-amber">
+        <div class="metric-info">
+          <h3>Ineligible / Incomplete</h3>
+          <div class="metric-value">{{ batch_summary.ineligible_rows }}</div>
+          <div class="metric-sub">Missing required values</div>
+        </div>
+        <div class="metric-icon-box">
+          <i data-lucide="alert-circle"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions & Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h4 class="card-title">
+            <i data-lucide="table" style="width: 18px; color: var(--teal-primary);"></i>
+            <span>Batch Predictions Preview (Top 25 Rows)</span>
+          </h4>
+          <span class="card-subtitle">Download full results or persist eligible records into patient database</span>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+          <a href="{{ url_for('download_batch_results') }}" class="btn btn-secondary">
+            <i data-lucide="download"></i>
+            <span>Download Results CSV</span>
+          </a>
+          <form action="{{ url_for('save_batch_to_database') }}" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Save all eligible batch records into the SQLite patient database?');">
+              <i data-lucide="database"></i>
+              <span>Save to Patient Database</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Gender / Age</th>
+              <th>Glucose</th>
+              <th>HbA1c</th>
+              <th>BMI</th>
+              <th>Hypertension</th>
+              <th>Heart Disease</th>
+              <th>Predicted Risk</th>
+              <th>Probability (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in batch_preview %}
+              <tr>
+                <td style="color: var(--text-light); font-size: 0.8rem;">{{ loop.index }}</td>
+                <td>{{ row.get('gender', 'Other') }} • {{ row.get('age', 0)|int }}y</td>
+                <td><strong>{{ row.get('blood_glucose_level', '-') }}</strong></td>
+                <td>{{ row.get('HbA1c_level', '-') }}%</td>
+                <td>{{ row.get('bmi', '-') }}</td>
+                <td>{{ 'Yes' if row.get('hypertension') == 1 else 'No' }}</td>
+                <td>{{ 'Yes' if row.get('heart_disease') == 1 else 'No' }}</td>
+                <td>
+                  {% if row.predicted_risk_category == 'Higher Risk' %}
+                    <span class="badge badge-high">Higher Risk</span>
+                  {% elif row.predicted_risk_category == 'Lower Risk' %}
+                    <span class="badge badge-low">Lower Risk</span>
+                  {% else %}
+                    <span class="badge" style="background: var(--bg-secondary); color: var(--risk-warning);">Ineligible Row</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.risk_probability_percent is not none %}
+                    <strong style="color: {% if row.predicted_risk_category == 'Higher Risk' %}var(--risk-high){% else %}var(--teal-primary){% endif %};">
+                      {{ row.risk_probability_percent }}%
+                    </strong>
+                  {% else %}
+                    <span style="color: var(--text-light);">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

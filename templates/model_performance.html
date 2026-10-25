@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}Model Performance & Evaluation — Diavision{% endblock %}
+{% block page_title %}Machine Learning Model Performance & Metrics{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Header Banner -->
+  <div class="card" style="background: linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">
+            Active Model: {{ metrics.selected_model }}
+          </h3>
+          <span class="badge badge-low">Production Pipeline</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.5;">
+          <strong>Selection Logic:</strong> {{ metrics.selection_criteria }}
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--text-muted);">
+        <div><strong>Version:</strong> {{ metrics.version }}</div>
+        <div><strong>Trained:</strong> {{ metrics.training_date }}</div>
+        <div><strong>Dataset:</strong> {{ metrics.dataset_source }} ({{ metrics.total_samples }} records)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Evaluation Metrics Row -->
+  <div class="metrics-grid">
+    <div class="metric-card accent-rose">
+      <div class="metric-info">
+        <h3>Recall (Clinical Sensitivity)</h3>
+        <div class="metric-value">{{ (metrics.best_metrics.recall * 100)|round(1) }}%</div>
+        <div class="metric-sub">Primary clinical screening priority</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="target"></i>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-info">
+        <h3>ROC-AUC Score</h3>
+        <div class="metric-value">{{ metrics.best_metrics.roc_auc }}</div>
+        <div class="metric-sub">Separation discriminatory power</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="award"></i>
+      </div>
+    </div>
+
+    <div class="metric-card accent-indigo">
+      <div class="metric-info">
+        <h3>Overall Accuracy</h3>
+        <div class="metric-value">{{ (metrics.best_metrics.accuracy * 100)|round(1) }}%</div>
+        <div class="metric-sub">Held-out 20% test partition</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="check-circle-2"></i>
+      </div>
+    </div>
+
+    <div class="metric-card accent-amber">
+      <div class="metric-info">
+        <h3>F1-Score</h3>
+        <div class="metric-value">{{ metrics.best_metrics.f1_score }}</div>
+        <div class="metric-sub">Harmonic precision-recall balance</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="sliders"></i>
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-info">
+        <h3>Precision</h3>
+        <div class="metric-value">{{ (metrics.best_metrics.precision * 100)|round(1) }}%</div>
+        <div class="metric-sub">Positive predictive value</div>
+      </div>
+      <div class="metric-icon-box">
+        <i data-lucide="crosshair"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Comparison Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="git-compare" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Multi-Classifier Benchmark Comparison</span>
+        </h4>
+        <span class="card-subtitle">
+          Evaluated on the exact same 20,000-sample held-out stratified test dataset
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Classifier Algorithm</th>
+            <th>Accuracy</th>
+            <th>Precision</th>
+            <th>Recall (Sensitivity)</th>
+            <th>F1-Score</th>
+            <th>ROC-AUC</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in metrics.models_comparison %}
+            <tr {% if m.model_name == metrics.selected_model %}style="background: rgba(13, 148, 136, 0.05); font-weight: 600;"{% endif %}>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  {% if m.model_name == metrics.selected_model %}
+                    <i data-lucide="check-circle" style="width: 16px; color: var(--teal-primary);"></i>
+                  {% endif %}
+                  <span>{{ m.model_name }}</span>
+                </div>
+              </td>
+              <td>{{ (m.accuracy * 100)|round(2) }}%</td>
+              <td>{{ (m.precision * 100)|round(2) }}%</td>
+              <td>
+                <span class="badge {% if m.recall >= 0.85 %}badge-high{% else %}badge-warning{% endif %}">
+                  {{ (m.recall * 100)|round(2) }}%
+                </span>
+              </td>
+              <td>{{ m.f1_score }}</td>
+              <td><strong>{{ m.roc_auc }}</strong></td>
+              <td>
+                {% if m.model_name == metrics.selected_model %}
+                  <span class="badge badge-low">Selected Winner</span>
+                {% else %}
+                  <span class="badge" style="background: var(--bg-secondary); color: var(--text-muted);">Benchmark</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Confusion Matrix & ROC Curve Grid -->
+  <div class="charts-grid-2">
+    <!-- Confusion Matrix Card -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h4 class="card-title">
+            <i data-lucide="grid" style="width: 18px; color: var(--teal-primary);"></i>
+            <span>Confusion Matrix (Test Partition: 20,000 Samples)</span>
+          </h4>
+          <span class="card-subtitle">Detailed breakdown of classification outcomes</span>
+        </div>
+      </div>
+
+      {% set cm = metrics.best_metrics.confusion_matrix %}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+        <div style="background: var(--bg-secondary); border: 2px solid var(--teal-border); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">True Negatives (TN)</span>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--teal-primary); margin: 0.25rem 0;">{{ cm.tn }}</div>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Correctly identified non-diabetic</span>
+        </div>
+
+        <div style="background: var(--bg-secondary); border: 2px solid var(--risk-warning-border); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">False Positives (FP)</span>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--risk-warning); margin: 0.25rem 0;">{{ cm.fp }}</div>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Non-diabetic flagged for screening</span>
+        </div>
+
+        <div style="background: var(--bg-secondary); border: 2px solid var(--risk-high-border); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">False Negatives (FN)</span>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--risk-high); margin: 0.25rem 0;">{{ cm.fn }}</div>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Diabetic cases missed (Minimized)</span>
+        </div>
+
+        <div style="background: var(--bg-secondary); border: 2px solid var(--teal-border); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">True Positives (TP)</span>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--teal-primary); margin: 0.25rem 0;">{{ cm.tp }}</div>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Correctly caught diabetic cases</span>
+        </div>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem; line-height: 1.45;">
+        * Clinical sensitivity is demonstrated by the high True Positive rate ({{ cm.tp }} / {{ cm.tp + cm.fn }} = {{ (metrics.best_metrics.recall * 100)|round(1) }}%), ensuring that individuals with elevated risk are caught.
+      </p>
+    </div>
+
+    <!-- ROC Curve Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h4 class="card-title">
+            <i data-lucide="trending-up" style="width: 18px; color: var(--teal-primary);"></i>
+            <span>Receiver Operating Characteristic (ROC Curve)</span>
+          </h4>
+          <span class="card-subtitle">AUC: <strong>{{ metrics.best_metrics.roc_auc }}</strong> (Near Optimal Discriminative Ability)</span>
+        </div>
+      </div>
+      <div class="chart-container" style="height: 290px;">
+        <canvas id="chartRocCurve"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Importance Ranking -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="bar-chart-2" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Model Feature Importances & Relative Weights</span>
+        </h4>
+        <span class="card-subtitle">Determines which parameters exert the greatest influence on prediction outcomes</span>
+      </div>
+    </div>
+
+    {% if metrics.feature_importances %}
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.75rem;">
+        {% for feat, imp in metrics.feature_importances.items() %}
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+              <span style="font-weight: 600;">{{ feat }}</span>
+              <span style="color: var(--text-muted);">{{ (imp * 100)|round(1) }}%</span>
+            </div>
+            <div class="progress-track" style="margin: 0; height: 8px;">
+              <div class="progress-fill" style="width: {{ imp * 200 }}%; background: linear-gradient(90deg, var(--teal-primary), var(--lavender-accent));"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const rocData = {{ metrics.best_metrics.roc_curve | tojson }};
+    const ctx = document.getElementById('chartRocCurve');
+    if (ctx && rocData) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: rocData.fpr,
+          datasets: [
+            {
+              label: 'ROC Curve (AUC = {{ metrics.best_metrics.roc_auc }})',
+              data: rocData.tpr,
+              borderColor: '#0d9488',
+              backgroundColor: 'rgba(13, 148, 136, 0.15)',
+              fill: true,
+              tension: 0.2,
+              pointRadius: 2
+            },
+            {
+              label: 'Random Chance Baseline',
+              data: rocData.fpr,
+              borderColor: '#94a3b8',
+              borderDash: [5, 5],
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { title: { display: true, text: 'False Positive Rate (1 - Specificity)' }, min: 0, max: 1 },
+            y: { title: { display: true, text: 'True Positive Rate (Sensitivity / Recall)' }, min: 0, max: 1 }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

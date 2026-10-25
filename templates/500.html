@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}System Error — Diavision{% endblock %}
+{% block page_title %}500 — Application Processing Error{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 4rem 2rem; max-width: 600px; margin: 2rem auto;">
+  <i data-lucide="alert-octagon" style="width: 56px; height: 56px; color: var(--risk-high); margin: 0 auto 1.25rem;"></i>
+  <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">System Error</h3>
+  <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.75rem;">
+    An internal error occurred while processing the requested operation. No patient data has been compromised. Please retry the request.
+  </p>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+    <i data-lucide="layout-dashboard"></i>
+    <span>Return to Dashboard</span>
+  </a>
+</div>
+{% endblock %}

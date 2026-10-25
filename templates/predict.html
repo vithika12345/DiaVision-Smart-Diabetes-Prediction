@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}New Patient Prediction — Diavision{% endblock %}
+{% block page_title %}Patient Intake & Clinical Risk Prediction{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i data-lucide="stethoscope" style="width: 20px; color: var(--teal-primary);"></i>
+          <span>Clinical Parameter Entry</span>
+        </h3>
+        <p class="card-subtitle">
+          Input patient physiological and laboratory measurements to assess diabetes risk via the trained ML pipeline.
+        </p>
+      </div>
+
+      <!-- Quick Fill Sample Buttons -->
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnSampleLowRisk">
+          <i data-lucide="shield-check" style="width: 14px; color: var(--teal-primary);"></i>
+          <span>Sample: Low Risk</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnSampleHighRisk">
+          <i data-lucide="alert-triangle" style="width: 14px; color: var(--risk-high);"></i>
+          <span>Sample: High Risk</span>
+        </button>
+      </div>
+    </div>
+
+    <form action="{{ url_for('predict_page') }}" method="POST" id="predictionForm">
+      <!-- Section 1: Identification -->
+      <div style="margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-color);">
+        <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
+          1. Patient Identification
+        </h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <span>Patient Identifier *</span>
+              <span class="form-hint">Unique permanent ID</span>
+            </label>
+            <input type="text" name="patient_id" id="field_patient_id" class="form-control" value="{{ next_patient_id }}" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Patient Name (Optional)</span>
+              <span class="form-hint">Leave blank for anonymized record</span>
+            </label>
+            <input type="text" name="name" id="field_name" class="form-control" placeholder="e.g. Anjali Sharma or leave blank">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Demographics & Medical History -->
+      <div style="margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-color);">
+        <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
+          2. Demographics & Cardiovascular History
+        </h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <span>Gender *</span>
+              <span class="form-hint">Biological sex</span>
+            </label>
+            <select name="gender" id="field_gender" class="form-control form-select" required>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Age (Years) *</span>
+              <span class="form-hint">Range: 1 – 120</span>
+            </label>
+            <input type="number" name="age" id="field_age" class="form-control" min="1" max="120" step="1" value="45" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Hypertension *</span>
+              <span class="form-hint">Diagnosed high blood pressure</span>
+            </label>
+            <select name="hypertension" id="field_hypertension" class="form-control form-select" required>
+              <option value="0">No (Normotensive)</option>
+              <option value="1">Yes (Hypertensive)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Heart Disease History *</span>
+              <span class="form-hint">Pre-existing cardiovascular condition</span>
+            </label>
+            <select name="heart_disease" id="field_heart_disease" class="form-control form-select" required>
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Smoking History *</span>
+              <span class="form-hint">Nicotine exposure status</span>
+            </label>
+            <select name="smoking_history" id="field_smoking_history" class="form-control form-select" required>
+              <option value="never">Never Smoked</option>
+              <option value="former">Former Smoker</option>
+              <option value="current">Current Smoker</option>
+              <option value="ever">Ever Smoked</option>
+              <option value="not current">Not Currently Smoking</option>
+              <option value="No Info">No Information</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Clinical & Laboratory Measurements -->
+      <div style="margin-bottom: 2rem;">
+        <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
+          3. Physiological & Metabolic Biomarkers
+        </h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <span>Body Mass Index (BMI) *</span>
+              <span class="form-hint">Normal: 18.5 – 24.9 kg/m²</span>
+            </label>
+            <input type="number" name="bmi" id="field_bmi" class="form-control" min="10" max="90" step="0.01" value="26.50" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>HbA1c Level (%) *</span>
+              <span class="form-hint">Normal: &lt;5.7%, Prediabetes: 5.7–6.4%</span>
+            </label>
+            <input type="number" name="HbA1c_level" id="field_hba1c" class="form-control" min="3.5" max="16.0" step="0.1" value="5.6" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <span>Blood Glucose (mg/dL) *</span>
+              <span class="form-hint">Fasting normal: 70–99, Post-prandial: &lt;140</span>
+            </label>
+            <input type="number" name="blood_glucose_level" id="field_glucose" class="form-control" min="50" max="450" step="1" value="110" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Actions -->
+      <div style="display: flex; justify-content: flex-end; gap: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color);">
+        <button type="reset" class="btn btn-secondary">
+          <i data-lucide="rotate-ccw"></i>
+          <span>Reset Form</span>
+        </button>
+        <button type="submit" class="btn btn-primary" id="btnPredictSubmit">
+          <i data-lucide="sparkles"></i>
+          <span>Predict Risk & Save Record</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const btnLow = document.getElementById('btnSampleLowRisk');
+    const btnHigh = document.getElementById('btnSampleHighRisk');
+
+    if (btnLow) {
+      btnLow.addEventListener('click', () => {
+        document.getElementById('field_gender').value = 'Female';
+        document.getElementById('field_age').value = '32';
+        document.getElementById('field_hypertension').value = '0';
+        document.getElementById('field_heart_disease').value = '0';
+        document.getElementById('field_smoking_history').value = 'never';
+        document.getElementById('field_bmi').value = '22.80';
+        document.getElementById('field_hba1c').value = '5.0';
+        document.getElementById('field_glucose').value = '92';
+        showToast('Filled sample healthy baseline measurements.', 'info');
+      });
+    }
+
+    if (btnHigh) {
+      btnHigh.addEventListener('click', () => {
+        document.getElementById('field_gender').value = 'Male';
+        document.getElementById('field_age').value = '58';
+        document.getElementById('field_hypertension').value = '1';
+        document.getElementById('field_heart_disease').value = '1';
+        document.getElementById('field_smoking_history').value = 'former';
+        document.getElementById('field_bmi').value = '33.40';
+        document.getElementById('field_hba1c').value = '7.5';
+        document.getElementById('field_glucose').value = '210';
+        showToast('Filled sample elevated risk measurements.', 'warning');
+      });
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Diavision — Diabetes Prediction & Patient Records System{% endblock %}</title>
+  
+  <!-- Modern Typography Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Main Style -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-container">
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="brand-wrapper">
+          <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Diavision Logo" class="brand-logo">
+          <div class="brand-text">
+            <h1>Diavision</h1>
+            <span>Clinical Intelligence</span>
+          </div>
+        </a>
+        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar">
+          <i data-lucide="chevron-left" class="nav-icon"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-section-title">Core Operations</span>
+        <a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+          <i data-lucide="layout-dashboard" class="nav-icon"></i>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="{{ url_for('predict_page') }}" class="nav-link {% if active_page == 'predict' %}active{% endif %}">
+          <i data-lucide="user-plus" class="nav-icon"></i>
+          <span class="nav-text">New Prediction</span>
+        </a>
+        <a href="{{ url_for('patients_page') }}" class="nav-link {% if active_page == 'patients' %}active{% endif %}">
+          <i data-lucide="users" class="nav-icon"></i>
+          <span class="nav-text">Patient Records</span>
+        </a>
+        <a href="{{ url_for('batch_prediction_page') }}" class="nav-link {% if active_page == 'batch' %}active{% endif %}">
+          <i data-lucide="layers" class="nav-icon"></i>
+          <span class="nav-text">Batch Prediction</span>
+        </a>
+
+        <span class="nav-section-title">Machine Learning & Data</span>
+        <a href="{{ url_for('datasets_page') }}" class="nav-link {% if active_page == 'datasets' %}active{% endif %}">
+          <i data-lucide="database" class="nav-icon"></i>
+          <span class="nav-text">Dataset Management</span>
+        </a>
+        <a href="{{ url_for('model_performance_page') }}" class="nav-link {% if active_page == 'model' %}active{% endif %}">
+          <i data-lucide="cpu" class="nav-icon"></i>
+          <span class="nav-text">Model Performance</span>
+        </a>
+
+        <span class="nav-section-title">Health & Reports</span>
+        <a href="{{ url_for('habit_planner_page') }}" class="nav-link {% if active_page == 'habits' %}active{% endif %}">
+          <i data-lucide="check-square" class="nav-icon"></i>
+          <span class="nav-text">7-Day Habit Planner</span>
+        </a>
+        <a href="{{ url_for('reports_page') }}" class="nav-link {% if active_page == 'reports' %}active{% endif %}">
+          <i data-lucide="file-text" class="nav-icon"></i>
+          <span class="nav-text">Reports & Analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p>Diavision Decision Support</p>
+        <p style="font-size: 0.68rem; margin-top: 0.2rem;">Academic ML Research</p>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-icon" id="mobileMenuToggleBtn" style="display: none;" title="Open Menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <h2 class="page-title">{% block page_title %}Clinical Dashboard{% endblock %}</h2>
+          
+          <div class="topbar-search">
+            <i data-lucide="search" class="search-icon" style="width: 16px; height: 16px;"></i>
+            <input type="text" id="globalSearchInput" class="search-input" placeholder="Search patient ID or name...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Model Live Status Badge -->
+          <div class="model-badge">
+            <span class="model-pulse-dot"></span>
+            <span>ML: {{ active_model_name|default('Random Forest') }}</span>
+          </div>
+
+          <!-- Dark / Light Theme Toggle -->
+          <button class="btn-icon" id="themeToggleBtn" title="Toggle Theme">
+            <i data-lucide="moon"></i>
+          </button>
+
+          <!-- User Profile -->
+          <div class="user-profile">
+            <div class="avatar">DV</div>
+            <div class="user-info">
+              <span class="user-name">Clinical Admin</span>
+              <span class="user-role">Research Station</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="page-content">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="clinical-alert {{ category }}">
+                <div class="clinical-alert-icon">
+                  <i data-lucide="info"></i>
+                </div>
+                <div>
+                  <p>{{ message }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+        <!-- Prominent Medical Disclaimer -->
+        <div class="medical-disclaimer-box no-print">
+          <strong>Medical Decision-Support Notice:</strong> Diavision is an educational machine learning decision-support prototype. Its predictions are not a medical diagnosis. Health recommendations are general educational information and do not replace consultation with a qualified healthcare professional. Do not change prescribed medications based on this application.
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Main JavaScript -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

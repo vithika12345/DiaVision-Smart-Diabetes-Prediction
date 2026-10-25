@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction Result — {{ patient.patient_id }} — Diavision{% endblock %}
+{% block page_title %}Clinical Prediction & Personalized Guidance{% endblock %}
+
+{% block content %}
+<div style="max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Smart Health Alerts (If Triggered by Clinical Rules) -->
+  {% if recs.smart_alerts %}
+    {% for alert in recs.smart_alerts %}
+      <div class="clinical-alert {{ alert.level }}">
+        <div class="clinical-alert-icon">
+          <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+        </div>
+        <div>
+          <h4>{{ alert.title }}</h4>
+          <p>{{ alert.message }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- 1. Prediction Outcome Hero Card -->
+  <div class="card" style="border-top: 5px solid {% if prediction.prediction_category == 'Higher Risk' %}var(--risk-high){% else %}var(--teal-primary){% endif %};">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+      <div style="flex: 1; min-width: 280px;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+          <span class="patient-id-badge" style="font-size: 0.95rem;">{{ patient.patient_id }}</span>
+          {% if patient.name %}
+            <span style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">{{ patient.name }}</span>
+          {% endif %}
+          <span style="color: var(--text-muted); font-size: 0.85rem;">• {{ patient.latest_prediction_date }}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1rem; margin: 1rem 0;">
+          {% if prediction.prediction_category == 'Higher Risk' %}
+            <span class="badge badge-high" style="font-size: 1.25rem; padding: 0.5rem 1.25rem;">
+              <i data-lucide="alert-octagon" style="width: 20px; height: 20px;"></i>
+              <span>Higher Risk Category</span>
+            </span>
+          {% else %}
+            <span class="badge badge-low" style="font-size: 1.25rem; padding: 0.5rem 1.25rem;">
+              <i data-lucide="shield-check" style="width: 20px; height: 20px;"></i>
+              <span>Lower Risk Category</span>
+            </span>
+          {% endif %}
+        </div>
+
+        <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; margin-top: 0.75rem;">
+          {{ recs.summary_explanation }}
+        </p>
+      </div>
+
+      <!-- Probability Gauge Box -->
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; min-width: 200px; text-align: center;">
+        <span style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Estimated Probability</span>
+        <div style="font-size: 2.4rem; font-weight: 800; color: {% if prediction.prediction_category == 'Higher Risk' %}var(--risk-high){% else %}var(--teal-primary){% endif %}; margin: 0.25rem 0;">
+          {{ prediction.risk_probability }}%
+        </div>
+        <div class="progress-track" style="margin-top: 0.5rem;">
+          <div class="progress-fill" style="width: {{ prediction.risk_probability }}%; background: {% if prediction.prediction_category == 'Higher Risk' %}linear-gradient(90deg, #f59e0b, #e11d48){% else %}linear-gradient(90deg, #14b8a6, #0d9488){% endif %};"></div>
+        </div>
+        <span style="font-size: 0.72rem; color: var(--text-light); display: block; margin-top: 0.5rem;">Calibrated ML Estimate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Patient Measurements Summary & Explainability Factors -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title"><i data-lucide="bar-chart-horizontal" style="width: 18px; color: var(--teal-primary);"></i> Contributing Clinical Factors & Measurements</h4>
+        <span class="card-subtitle">Values submitted for this evaluation and their clinical significance</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Blood Glucose</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ patient.blood_glucose_level }} mg/dL</div>
+      </div>
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">HbA1c Level</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ patient.hba1c_level }}%</div>
+      </div>
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">BMI</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ patient.bmi }} kg/m²</div>
+      </div>
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Age</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ patient.age|int }} yrs</div>
+      </div>
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Hypertension</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ 'Yes' if patient.hypertension == 1 else 'No' }}</div>
+      </div>
+      <div style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-sm);">
+        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Heart Disease</span>
+        <div style="font-size: 1.15rem; font-weight: 700;">{{ 'Yes' if patient.heart_disease == 1 else 'No' }}</div>
+      </div>
+    </div>
+
+    <!-- Factor Impact Table -->
+    {% if prediction.contributing_factors %}
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Recorded Value</th>
+              <th>Clinical Impact Tier</th>
+              <th>Clinical Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for factor in prediction.contributing_factors %}
+              <tr>
+                <td style="font-weight: 600;">{{ factor.feature }}</td>
+                <td>{{ factor.value }}</td>
+                <td>
+                  <span class="badge {% if 'High' in factor.impact %}badge-high{% elif 'Moderate' in factor.impact %}badge-warning{% elif 'Normal' in factor.impact %}badge-low{% else %}badge-lavender{% endif %}">
+                    {{ factor.impact }}
+                  </span>
+                </td>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">{{ factor.note }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- 3. Dual Columns: What Should I Do? vs What Should I Avoid? -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem;">
+    <!-- What Should I Do? -->
+    <div class="card" style="border-left: 4px solid var(--teal-primary);">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <div>
+          <h4 class="card-title" style="color: var(--teal-primary);">
+            <i data-lucide="check-circle-2"></i>
+            <span>Recommended Actions</span>
+          </h4>
+          <span class="card-subtitle">Evidence-informed daily lifestyle steps</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        {% for act in recs.recommended_actions %}
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.65rem; background: var(--bg-secondary); border-radius: var(--radius-sm);">
+            <div style="color: var(--teal-primary); margin-top: 2px;">
+              <i data-lucide="{{ act.icon }}" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div>
+              <strong style="font-size: 0.88rem; color: var(--text-main); display: block;">{{ act.title }}</strong>
+              <span style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; display: block; margin-top: 2px;">{{ act.desc }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- What Should I Avoid? -->
+    <div class="card" style="border-left: 4px solid var(--risk-high);">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <div>
+          <h4 class="card-title" style="color: var(--risk-high);">
+            <i data-lucide="x-circle"></i>
+            <span>Habits to Limit or Avoid</span>
+          </h4>
+          <span class="card-subtitle">Practices that aggravate glycemic instability</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        {% for item in recs.habits_to_avoid %}
+          <div style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.65rem; background: var(--bg-secondary); border-radius: var(--radius-sm);">
+            <div style="color: var(--risk-high); margin-top: 2px;">
+              <i data-lucide="ban" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div>
+              <strong style="font-size: 0.88rem; color: var(--text-main); display: block;">{{ item.title }}</strong>
+              <span style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; display: block; margin-top: 2px;">{{ item.desc }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Personalized Exercise Guidance -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="activity" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Personalized Physical Activity Guidance</span>
+        </h4>
+        <span class="card-subtitle">Activity Level: <strong>{{ recs.exercise_plan.intensity }}</strong></span>
+      </div>
+      <span class="badge badge-lavender">Target: 150 min / week</span>
+    </div>
+
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+      {{ recs.exercise_plan.guidance }}
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+      {% for act in recs.exercise_plan.activities %}
+        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-weight: 700; color: var(--text-main);">
+            <i data-lucide="flame" style="width: 16px; color: var(--risk-warning);"></i>
+            <span>{{ act.name }}</span>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">{{ act.duration }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 5. Personalized Balanced Food Guidance (Indian Meal Examples) -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h4 class="card-title">
+          <i data-lucide="utensils" style="width: 18px; color: var(--teal-primary);"></i>
+          <span>Balanced Meal Guidance & Practical Food Examples</span>
+        </h4>
+        <span class="card-subtitle">Nutritionally balanced Indian dietary patterns for glycemic control</span>
+      </div>
+    </div>
+
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+      {{ recs.diet_guidance.intro }}
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+      {% for meal in recs.diet_guidance.indian_meal_examples %}
+        <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-secondary);">
+          <strong style="color: var(--teal-primary); font-size: 0.88rem; display: block; margin-bottom: 0.4rem;">
+            {{ meal.meal }}
+          </strong>
+          <p style="font-size: 0.82rem; color: var(--text-main); line-height: 1.45;">
+            {{ meal.example }}
+          </p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="background: var(--bg-card); padding: 0.85rem 1rem; border-radius: var(--radius-sm); border: 1px dashed var(--border-color);">
+      <strong style="font-size: 0.82rem; color: var(--text-main); display: block; margin-bottom: 0.25rem;">Core Principles:</strong>
+      <ul style="padding-left: 1.25rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+        {% for pr in recs.diet_guidance.principles %}
+          <li>{{ pr }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- 6. Action Buttons Strip -->
+  <div class="card no-print" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <span style="font-weight: 600; font-size: 0.92rem; color: var(--text-main);">Clinical Report Actions</span>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Export, print doctor summary, or continue registering patients.</p>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <a href="{{ url_for('doctor_summary_page', patient_id=patient.patient_id) }}" target="_blank" class="btn btn-secondary">
+        <i data-lucide="printer"></i>
+        <span>Print Doctor Summary</span>
+      </a>
+      <a href="{{ url_for('habit_planner_page', patient_id=patient.patient_id) }}" class="btn btn-secondary">
+        <i data-lucide="calendar"></i>
+        <span>7-Day Habit Planner</span>
+      </a>
+      <a href="{{ url_for('predict_page') }}" class="btn btn-primary">
+        <i data-lucide="user-plus"></i>
+        <span>Register Another Patient</span>
+      </a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
